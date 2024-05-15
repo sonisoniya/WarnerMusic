@@ -7,7 +7,8 @@ export interface EnhancedTableToolbarProps {
     rows: Data[]; 
     dynamicKey: string; 
     actionButtons:boolean;
-    reloadActiveTab: ()=> Void
+    reloadActiveTab: ()=> Void;
+    handleAlbumSearchChange:()=>Void;
 }
 
 export interface HeadCell {

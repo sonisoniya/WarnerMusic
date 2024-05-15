@@ -81,7 +81,7 @@ export default function CommonDataTable({ rows, tabType, headCells, loading, err
     const [page, setPage] = React.useState(0);
     const [dense, setDense] = React.useState(true);
     const [rowsPerPage, setRowsPerPage] = React.useState(10);
-    const [filteredRows, setFilteredRows] = React.useState<Data[]>(rows);
+    const [albumSearch, setAlbumSearch] = useState("");
 
     React.useEffect(() => {
         setSelected([]); // Clear selected items when rows change
@@ -170,10 +170,15 @@ export default function CommonDataTable({ rows, tabType, headCells, loading, err
     const handleValueChange = (newValue) => {
         setInputValue(newValue);
     };
+
+  const handleAlbumSearchChange = (searchTerm) => {
+    setAlbumSearch(searchTerm);
+  };
+
     return (
         <Box sx={{ width: '100%' }}>
             <Paper sx={{ width: '100%', mb: 2 }}>
-                <EnhancedTableToolbar tabType={tabType} numSelected={selected.length} description={description} rows={rows} selected={selected} dynamicKey={'ALBUM'} actionButtons={actionButtons} reloadActiveTab={reloadActiveTab} actionType={actionType} />
+                <EnhancedTableToolbar tabType={tabType} numSelected={selected.length} description={description} rows={rows} selected={selected} dynamicKey={'ALBUM'} actionButtons={actionButtons} reloadActiveTab={reloadActiveTab} actionType={actionType} handleAlbumSearchChange={handleAlbumSearchChange}  />
                 <TableContainer>
                     <Table
                         sx={{ minWidth: 750 }}
@@ -198,6 +203,15 @@ export default function CommonDataTable({ rows, tabType, headCells, loading, err
                             <TableBody>
                                 {stableSort(rows, getComparator(order, orderBy))
                                     .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                                    ?.filter(row => {
+                                        if (albumSearch === '') {
+                                            return true; 
+                                        }
+                                        if (row.ALBUM && typeof row.ALBUM === 'string') {
+                                            return row.ALBUM.toLowerCase().includes(albumSearch.toLowerCase());
+                                        }
+                                        return false;
+                                    })
                                     ?.map((row, index) => {
                                         const isItemSelected = isSelected(row.id);
                                         const labelId = `enhanced-table-checkbox-${index}`;
