@@ -1,286 +1,188 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
-import {DropdownSelect,
-} from "../components";
-import { Grid, Card, CardContent, Stack, Tab, Tabs, Button, Box } from "@mui/material";
-import useRegionData, { RegionData } from '../hooks/useRegionData';
-import useSingerData, { SingerData } from '../hooks/useSingerData';
-import useLanguageData, { LanguageData } from '../hooks/useLanguageData';
+import { Grid, Tab, Tabs } from "@mui/material";
+import useBaseData, { BaseData } from '../hooks/useBaseData';
 import CommonDataTable from '../components/CommonDataTable';
+import Header from '../components/Header';
+import TableSelection from '../components/TableSelection';
+import { useGenericData } from '../hooks/useGenericData';
+import useMetrics from '../hooks/useMetrics';
+import Metrics from '../components/Metrics';
+import noimage from '../noimage.jpeg';
 
-import logo from '../logo.png';
+function createDynamicHeadCells(data) {
+  if (!data || data.length === 0) return [];
 
-const Home: React.FC = () => {
-  const [tabValue, setTabValue] = React.useState('Singer');
-  const [singerTrigger, setSingerTrigger] = React.useState(false);
-  const [regionTrigger, setRegionTrigger] = React.useState(false);
-  const [languageTrigger, setLanguageTrigger] = React.useState(false);
-  
-  const [showTabs, setShowTabs] = React.useState(false);
-  const [viewType, setViewType] = React.useState('view');
-  const [selectedColumnValues, setColumnSelectedValues] = useState([]);
-  const [selectedTableValues, setSelectedTableValues] = useState([]);
+  const excludeKeys = ['id', 'STATUS_CD'];
+  const firstItemKeys = Object.keys(data[0]).filter(key => !excludeKeys.includes(key));
 
-  const { data: singerData, loading: singerLoading, error: singerError } = useSingerData(singerTrigger,viewType);
-  const { data: regionData, loading: regionLoading, error: regionError } = useRegionData(regionTrigger,viewType);
-  const { data: languageData, loading: languageLoading, error: languageError } = useLanguageData(languageTrigger,viewType);
-
-
-  const [singerBaseTrigger, setSingerBaseTrigger] = React.useState(false);
-  const [regionBaseTrigger, setRegionBaseTrigger] = React.useState(false);
-  const [languageBaseTrigger, setLanguageBaseTrigger] = React.useState(false);
-
-  const { data: singerBaseData, loading: singerBaseLoading, error: singerBaseError } = useSingerData(singerBaseTrigger,viewType);
-  const { data: regionBaseData, loading: regionBaseLoading, error: regionBaseError } = useRegionData(regionBaseTrigger,viewType);
-  const { data: languageBaseData, loading: languageBaseLoading, error: languageBaseError } = useLanguageData(languageBaseTrigger,viewType);
-
-
-  const singerDescription = "Validated Singer Records with non matched data";
-  const regionDescription = "Validated Region Records with non matched data";
-  const languageDescription = "Validated Language Records with non matched data";
-
-  const singerBaseDescription = " Base Singer Records from table ";
-  const regionBaseDescription = " Base Region Records from table ";
-  const languageBaseDescription = " Base Language Records from table";
-
-  const [selectedCheckboxCount, setSelectedCheckboxCount] = React.useState(0);
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
-    setTabValue(newValue);
-    triggerApiCall(newValue,viewType)
+  const formatKey = (key: string): string => {
+    const parts = key.split('_').map(part =>
+      part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+    );
+    return parts.join(' ');
   };
 
+  const dynamicHeadCells = firstItemKeys.map(key => ({
+    id: key, // Use the original key
+    numeric: false,
+    disablePadding: false,
+    label: formatKey(key), // Use the formatted label
+  }));
 
-  const triggerApiCall = (newValue: string, viewType: string) => {
-    if (viewType === 'view') {
-      if (newValue === 'Singer' || newValue === 'singer') {
-        setSingerBaseTrigger(true);
-      } else if (newValue === 'Region' || newValue === 'region') {
-        setRegionBaseTrigger(true);
-      } else if (newValue === 'Language' || newValue === 'language') {
-        setLanguageBaseTrigger(true);
+  const staticColumns = [
+    {
+      id: 'userChoice',
+      numeric: false,
+      disablePadding: false,
+      label: '',
+    },
+    {
+      id: 'action',
+      numeric: false,
+      disablePadding: false,
+      label: '',
+    },
+  ];
+
+  return [...dynamicHeadCells, ...staticColumns];
+}
+
+function createHeadCells(data) {
+  const uniqueKeys = new Set();
+
+  data.forEach(obj => {
+    Object.keys(obj).forEach(key => {
+      if (key !== 'id') {
+        uniqueKeys.add(key);
       }
-    } else if (viewType === 'validate') {
-      if (newValue === 'Singer' || newValue === 'singer') {
-        setSingerTrigger(true);
-      } else if (newValue === 'Region' || newValue === 'region') {
-        setRegionTrigger(true);
-      } else if (newValue === 'Language' || newValue === 'language') {
-        setLanguageTrigger(true);
-      }
-    }
-  };
+    });
+  });
 
-  const handleCheckboxSelect = (count: number) => {
-    setSelectedCheckboxCount(count);
-  };
+  const headCells = Array.from(uniqueKeys).map(key => ({
+    id: key,
+    numeric: false,
+    disablePadding: false,
+    label: key
+  }));
 
-
-  useEffect(() => {
-    setShowTabs(false); // Reset showTabs state whenever selectedColumnValues change
-  }, [selectedColumnValues]);
-
-  const handleValidateButtonClick = () => {
-    setViewType('validate');
-    setShowTabs(true);
-    // Set the first tab active based on the selected column values
-    if (selectedColumnValues.includes("singer")) {
-      setTabValue('Singer');
-      setSingerTrigger(true);
-    } else if (selectedColumnValues.includes("region")) {
-      setTabValue('Region');
-      setRegionTrigger(true);
-
-    } else if (selectedColumnValues.includes("language")) {
-      setTabValue('Language');
-      setLanguageTrigger(true);
-
-    }
-  };
-
-  const handleViewButtonClick = () => {
-    setViewType('view');
-    setShowTabs(true);
-    // Set the first tab active based on the selected column values
-    if (selectedColumnValues.includes("singer")) {
-      setTabValue('Singer');
-      setSingerBaseTrigger(true);
-    } else if (selectedColumnValues.includes("region")) {
-      setTabValue('Region');
-      setRegionBaseTrigger(true);
-
-    } else if (selectedColumnValues.includes("language")) {
-      setTabValue('Language');
-      setLanguageBaseTrigger(true);
-
-    }
-  };
-  
-
-  // Define rows and columns data
-  const rows = [
-    { id: 1, singer: "Snow", predictedSinger: "Jon", album: "Dark" },
-    { id: 2, singer: "Lannister", predictedSinger: "Cersei", album: "Sunshine" },
-    // Add more rows as needed
-  ];
-  interface HeadCell{
-    id:string;
-    numeric:boolean;
-    disablePadding:boolean;
-    label:string;
-  }
-
-  // Define the column configuration
-  const singerHeadCells : HeadCell[] = [
-    {
-      id: 'ALBUM',
-      numeric: false,
-      disablePadding: false,
-      label: 'ALBUM',
-    },
-    {
-      id: 'SINGER',
-      numeric: false,
-      disablePadding: false,
-      label: 'SINGER',
-    },
-    {
-      id: 'PREDICTED_SINGER',
-      numeric: false,
-      disablePadding: false,
-      label: 'PREDICTED SINGER',
-    },
-    {
-      id: 'action',
-      numeric: false,
-      disablePadding: false,
-      label: '',
-    }
-  ];
-  const regionHeadCells : HeadCell[] = [
-    {
-      id: 'ALBUM',
-      numeric: false,
-      disablePadding: false,
-      label: 'ALBUM',
-    },
-    {
-      id: 'SINGER',
-      numeric: false,
-      disablePadding: false,
-      label: 'SINGER',
-    },
-    {
-      id: 'REGION',
-      numeric: false,
-      disablePadding: false,
-      label: 'REGION',
-    },
-    {
-      id: 'PREDICTED_REGION',
-      numeric: false,
-      disablePadding: false,
-      label: 'PREDICTED REGION',
-    },
-    {
-      id: 'action',
-      numeric: false,
-      disablePadding: false,
-      label: '',
-    }
-  ];
-  const languageHeadCells : HeadCell[] = [
-    {
-      id: 'ALBUM',
-      numeric: false,
-      disablePadding: false,
-      label: 'ALBUM',
-    },
-    {
-      id: 'SINGER',
-      numeric: false,
-      disablePadding: false,
-      label: 'SINGER',
-    },
-    {
-      id: 'LANGUAGE',
-      numeric: false,
-      disablePadding: false,
-      label: 'LANGUAGE',
-    },
-    {
-      id: 'PREDICTED_LANGUAGE',
-      numeric: false,
-      disablePadding: false,
-      label: 'PREDICTED LANGUAGE',
-    },
-    {
-      id: 'action',
-      numeric: false,
-      disablePadding: false,
-      label: '',
-    }
-  ];
-
-
-  const singerBaseHeadCells : HeadCell[] = [
-    {
-      id: 'ALBUM',
-      numeric: false,
-      disablePadding: false,
-      label: 'ALBUM',
-    },
-    {
-      id: 'SINGER',
-      numeric: false,
-      disablePadding: false,
-      label: 'SINGER',
-    }
-  ];
-  const regionBaseHeadCells : HeadCell[] = [
-    {
-      id: 'ALBUM',
-      numeric: false,
-      disablePadding: false,
-      label: 'ALBUM',
-    },
-  
-    {
-      id: 'REGION',
-      numeric: false,
-      disablePadding: false,
-      label: 'REGION',
-    }
-  ];
-  const languageBaseHeadCells : HeadCell[] = [
-    {
-      id: 'ALBUM',
-      numeric: false,
-      disablePadding: false,
-      label: 'ALBUM',
-    },
+   // Find index of ALBUM_URL and move it to the beginning
+   const albumUrlIndex = headCells.findIndex(cell => cell.id === 'ALBUM_URL');
+   if (albumUrlIndex !== -1) {
+     const albumUrlCell = headCells.splice(albumUrlIndex, 1)[0];
+     headCells.unshift(albumUrlCell);
+   }
    
-    {
-      id: 'LANGUAGE',
-      numeric: false,
-      disablePadding: false,
-      label: 'LANGUAGE',
-    }
-  ];
+  return headCells;
+}
 
-  interface item{
-    value:string;
-    label:string;
-  }
-  const tableOptions:item[] = [
-    { value: 'Table', label: 'Table Name' },
-  ];
+interface item {
+  value: string;
+  label: string;
+}
+const Home: React.FC = () => {
 
   const columnOptions = [
     { value: 'singer', label: 'Singer' },
     { value: 'region', label: 'Region' },
     { value: 'language', label: 'Language' },
   ];
+
+  const tableOptions: item[] = [
+    { value: 'Music', label: 'Music' },
+  ];
+  const baseDescription = "Base records from selected table - Music";
+
+  const firstColumnValue = columnOptions[0];
+  const formattedTabValue = firstColumnValue.value
+  const [tabValue, setTabValue] = React.useState(formattedTabValue);
+
+  const [showTabs, setShowTabs] = React.useState(false);
+  const [viewType, setViewType] = React.useState('view');
+  const [selectedColumnValues, setColumnSelectedValues] = useState([]);
+  const [selectedTableValues, setSelectedTableValues] = useState([]);
+  const [activeDataType, setActiveDataType] = useState('');
+  const [baseTrigger, setBaseTrigger] = React.useState(0);
+  const [metricsTrigger, setMetricsTrigger] = React.useState(0);
+
+  const [forceRefreshData, setForceRefreshData] = useState(0);
+  const [visitedTabs, setVisitedTabs] = React.useState({});
+
+  const { data, loading, error } = useGenericData(activeDataType, forceRefreshData);
+
+  const { data: metricsData, loading: metricsLoading, error: metricsError } = useMetrics(metricsTrigger,data);
+  const { data: baseData, loading: baseLoading, error: baseError } = useBaseData(baseTrigger, selectedColumnValues);
+
+
+  const baseHeadCells = createHeadCells(baseData).map(cell => {
+    if (cell.id === 'ALBUM_URL') {
+      return {
+        ...cell,
+        label: 'ALBUM IMG'
+      };
+    }
+    return cell;
+  });
+  const updatedBaseData = baseData.map(row => {
+    if (!row['ALBUM_URL']) {
+      return { ...row, 'ALBUM_URL': <img src={noimage}alt="Image" style={{height:'70px', width:'70px', borderRadius:'3PX', boxShadow:'rgb(0 0 0 / 12%) 0px 0px 3px 3px'}}/>}
+    }
+    return row;
+  });
+
+
+  const updatedData = data.map(row => {
+    if (!row['ALBUM_URL']) {
+      return { ...row, 'ALBUM_URL': <img src={noimage}alt="Image" style={{height:'70px', width:'70px', borderRadius:'3PX', boxShadow:'rgb(0 0 0 / 12%) 0px 0px 3px 3px'}}/>}
+    }
+    return row;
+  });
+
+  const dynHeadCells = createDynamicHeadCells(data).map(cell => {
+    if (cell.id === 'ALBUM_URL') {
+      return {
+        ...cell,
+        label: 'Album Image'
+      };
+    }
+    return cell;
+  });
+  
+
+  
+
+
+  useEffect(() => {
+    if (viewType == 'validate') {
+      setShowTabs(false);
+    }
+  }, [selectedColumnValues]);
+  const handleValidateButtonClick = () => {
+    setViewType('validate');
+    setShowTabs(true);
+
+    if (selectedColumnValues.length > 0) {
+      const firstColumnValue = selectedColumnValues[0];
+      const formattedTabValue = firstColumnValue.charAt(0).toUpperCase() + firstColumnValue.slice(1);
+      setTabValue(formattedTabValue);
+
+      setActiveDataType(firstColumnValue);
+      setVisitedTabs({});
+      const firstColumnFormatted = firstColumnValue.toLowerCase();
+      setVisitedTabs({
+        [firstColumnFormatted]: true,
+      });
+
+      setForceRefreshData(prev => prev + 1);
+    } else {
+    }
+  };
+
+  const handleViewButtonClick = () => {
+    setViewType('view');
+    setShowTabs(true);
+    setBaseTrigger(prev => prev + 1);
+  }
 
   const handleTableSelectionChange = (selected) => {
     setSelectedTableValues(selected);
@@ -290,102 +192,103 @@ const Home: React.FC = () => {
     setColumnSelectedValues(selected);
   };
 
-  const reloadActiveTab =()=>{
-   if(tabValue == 'Singer'){
-    setSingerTrigger(!singerTrigger)
-    if(singerTrigger == true){
-     setSelectedTableValues([])
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+
+    const formattedDataType = newValue.toLowerCase();
+
+    if (!visitedTabs[formattedDataType]) {
+      setVisitedTabs(prevVisitedTabs => {
+        const updatedVisitedTabs = { ...prevVisitedTabs, [formattedDataType]: true };
+        return updatedVisitedTabs;
+      });
+
+      setForceRefreshData(prev => prev + 1);
+      setActiveDataType(formattedDataType);
+
+    } else {
+      setForceRefreshData(0);
+      setActiveDataType(formattedDataType);
     }
-   } 
-   else if(tabValue == 'Region'){
-    setRegionTrigger(!regionTrigger)
-    if(regionTrigger == true){
-     setSelectedTableValues([])
-    }
-   } else if(tabValue == 'Language'){
-    setLanguageTrigger(!languageTrigger)
-    if(languageTrigger == true){
-     setSelectedTableValues([])
-    }
-   }
- 
+
+
+  };
+
+  const reloadActiveTab = () => {
+    setSelectedTableValues([])
+    setTabValue(tabValue);
+    setForceRefreshData(prev => prev + 1);
+
   }
 
   return (
     <>
-      <Grid container>
-        <Grid item xs={1}></Grid>
-        <Grid item xs={10}>
-          <Stack flexDirection={'row'} paddingTop={1} paddingBottom={1}>
-            <img src={logo} style={{ height: '75px', width: 'min-content', marginRight: '20px' }} />
-          </Stack>
-          <div style={{ marginTop: '120px' }}>
-            <Card style={{padding:'35px', marginBottom:'30px'}}>
-              <Grid container>
-                <Grid xs={5} style={{padding:'10px'}}>
-                  <Box textAlign="left" paddingBottom="5px" fontWeight="fontWeightBold">
-                    Table
-                  </Box>
-                  <DropdownSelect options={tableOptions} isMulti={false}  selectedValues={selectedTableValues} onSelectionChange={handleTableSelectionChange} defaultSelection={"Table"} />
-                </Grid>
-                <Grid xs={5} style={{padding:'10px'}}>
-                  <Box textAlign="left" paddingBottom="5px" fontWeight="fontWeightBold">
-                    Columns
-                  </Box>
-                  <DropdownSelect options={columnOptions} isMulti={true } selectedValues={selectedColumnValues} onSelectionChange={handleColumnSelectionChange}/>
-                </Grid>
-                <Grid xs={2} style={{padding:'35px 10px 0px', textAlign:'right'}} >
-                  <Button disabled={selectedColumnValues.length <1 && selectedTableValues.length < 1} variant='contained' onClick={handleViewButtonClick}>View</Button> &nbsp;
-                  <Button disabled={selectedColumnValues.length <1 && selectedTableValues.length < 1} variant='contained' onClick={handleValidateButtonClick}>Validate</Button>
-                </Grid>
-              </Grid>
-            </Card>
+     <div style={{ marginTop: '70px' }}>
+            <TableSelection
+              tableOptions={tableOptions}
+              columnOptions={columnOptions}
+              selectedTableValues={selectedTableValues}
+              selectedColumnValues={selectedColumnValues}
+              handleTableSelectionChange={handleTableSelectionChange}
+              handleColumnSelectionChange={handleColumnSelectionChange}
+              handleViewButtonClick={handleViewButtonClick}
+              handleValidateButtonClick={handleValidateButtonClick}
+            />
+       {metricsData!=null && 
+            <Metrics data={metricsData} loading={metricsLoading} error={metricsError} />
+          }
             {!showTabs && (
-              <div style={{textAlign:'center',padding:'30px'}}>
-              <p style={{fontSize:'20px',color:'#4673c3'}}> Please choose table and columns to view / validate ! </p>
+              <div style={{ textAlign: 'center', padding: '30px' }}>
+                <p style={{ fontSize: '20px', color: '#4673c3' }}> Please choose table and columns to view / validate ! </p>
               </div>
 
             )}
             {showTabs && (
               <div>
-                <Tabs sx={{ borderBottom: '1px solid #eee', background:'#FFEB3B' }} value={tabValue} onChange={handleTabChange} >
-                  { selectedColumnValues.includes("singer") && <Tab value="Singer" label="Singer" />}
-                  { selectedColumnValues.includes("region") && <Tab value="Region" label="Region" />}
-                  { selectedColumnValues.includes("language") && <Tab value="Language" label="Language" />}
-                </Tabs>
-                {viewType === 'validate' && (
-                <div style={{padding:'0px 0px'}}>
-                  {tabValue === 'Singer' && selectedColumnValues.includes("singer") && (
-                    <CommonDataTable viewType={viewType} tabType={'singer'} rows={singerData} headCells={singerHeadCells} loading={singerLoading} error={singerError} description={singerDescription}   actionButtons={true} reloadActiveTab={reloadActiveTab} />
-                  )}
-                  {tabValue === 'Region' && selectedColumnValues.includes("region") && (
-                    <CommonDataTable viewType={viewType}  tabType={'region'}  rows={regionData} headCells={regionHeadCells} loading={regionLoading} error={regionError} description={regionDescription}   actionButtons={true}  reloadActiveTab={reloadActiveTab} />
-                  )}
-                  {tabValue === 'Language' && selectedColumnValues.includes("language") && (
-                    <CommonDataTable  viewType={viewType}  tabType={'language'}  rows={languageData} headCells={languageHeadCells} loading={languageLoading} error={languageError} description={languageDescription}   actionButtons={true} reloadActiveTab={reloadActiveTab} />
-                  )}
-                </div>
+                {viewType === 'validate' &&
+                  <Tabs
+                    sx={{ borderBottom: '1px solid #eee', background: '#FFEB3B' }}
+                    value={tabValue}
+                    onChange={handleTabChange}
+                  >
+                    {selectedColumnValues.map((columnValue) => (
+                      <Tab
+                        key={columnValue}
+                        value={columnValue.charAt(0).toUpperCase() + columnValue.slice(1)} // Capitalize the first letter
+                        label={columnValue.charAt(0).toUpperCase() + columnValue.slice(1)} // Capitalize the first letter
+                      />
+                    ))}
+                  </Tabs>
+                }
+                {viewType === 'validate' && selectedColumnValues.includes(tabValue.toLowerCase()) && (
+                  <div style={{ padding: '0px 0px' }}>
+
+                    {showTabs && viewType === 'validate' && selectedColumnValues.includes(tabValue.toLowerCase()) && (
+                      <CommonDataTable
+                        viewType={viewType}
+                        tabType={tabValue.toLowerCase()}
+                        rows={updatedData}
+                        headCells={dynHeadCells}
+                        loading={loading}
+                        error={error}
+                        description={`${tabValue} Data Description`}
+                        actionButtons={viewType === 'validate'}
+                        reloadActiveTab={reloadActiveTab}
+                      />
+                    )}
+                  </div>
 
                 )}
-                                {viewType === 'view' && (
-                <div style={{padding:'0px 0px'}}>
-                  {tabValue === 'Singer' && selectedColumnValues.includes("singer") && (
-                    <CommonDataTable rows={singerBaseData} headCells={singerBaseHeadCells} loading={singerBaseLoading} error={singerBaseError} description={singerBaseDescription}  actionButtons={false} />
-                  )}
-                  {tabValue === 'Region' && selectedColumnValues.includes("region") && (
-                    <CommonDataTable rows={regionBaseData} headCells={regionBaseHeadCells} loading={regionBaseLoading} error={regionBaseError} description={regionBaseDescription}   actionButtons={false}/>
-                  )}
-                  {tabValue === 'Language' && selectedColumnValues.includes("language") && (
-                    <CommonDataTable rows={languageBaseData} headCells={languageBaseHeadCells} loading={languageBaseLoading} error={languageBaseError} description={languageBaseDescription}   actionButtons={false} />
-                  )}
-                </div>
-                                )}
+                {viewType === 'view' && (
+                  <div style={{ padding: '0px 0px' }}>
+
+                    <CommonDataTable rows={updatedBaseData} headCells={baseHeadCells} loading={baseLoading} error={baseError} description={baseDescription} actionButtons={false} />
+
+                  </div>
+                )}
               </div>
             )}
           </div>
-        </Grid>
-        <Grid item xs={1}></Grid>
-      </Grid>
     </>
   );
 };

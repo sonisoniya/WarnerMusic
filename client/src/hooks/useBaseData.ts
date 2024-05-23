@@ -1,35 +1,38 @@
-// useRegionData.ts
 import { useState, useEffect } from 'react';
-import { fetchRegionData, fetchRegionBaseData } from '../Api';
+import { fetchBaseData } from '../Api';
 
-export interface RegionData {
+export interface BaseData {
   CC_CALL_CENTER_ID: string;
   CC_NAME: string;
 }
 
-const useRegionData = (trigger: boolean, viewType:string) => {
-
-  const [data, setData] = useState<RegionData[]>([]);
+const useBaseData = (trigger: number, columns?:string[]) => {
+  const [data, setData] = useState<BaseData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!trigger) return; // Exit if trigger is false
     const fetchData = async () => {
       try {
+        if(trigger > 0){
+          
         setLoading(true);
-        const responseData = (viewType =='validate')? await fetchRegionData():await fetchRegionBaseData();
+        const allColumns = columns ? ['ALBUM', ...new Set(columns)] : ['ALBUM'];
+      
+        const responseData = await fetchBaseData(allColumns || []);
         setData(responseData);
         setLoading(false);
+
+      }
       } catch (error) {
         setError(error);
         setLoading(false);
       }
     };
     fetchData();
-  }, [trigger]); // Run effect when trigger changes
+  }, [trigger,columns]); // Run effect when trigger changes
 
   return { data, loading, error };
 };
 
-export default useRegionData;
+export default useBaseData;

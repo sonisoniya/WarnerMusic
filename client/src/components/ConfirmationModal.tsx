@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Box, Button, Card, Chip, Modal, Typography } from '@mui/material';
+import { Box, Button, Card, Chip, Modal, Typography, capitalize } from '@mui/material';
 import useValidateTableData from '../hooks/useValidateTableData';
 import { useEffect, useRef, useState } from 'react';
 
@@ -9,6 +9,8 @@ const ConfirmationModal = ({
   numSelected,
   tabType,
   selectedDynamicValues,
+  UserInput,
+  actionType,
   reloadActiveTab
 }: {
   open: boolean;
@@ -16,7 +18,9 @@ const ConfirmationModal = ({
   numSelected: number;
   tabType:string;
   selectedDynamicValues: string[];
-  reloadActiveTab: () => void;
+  UserInput?:string;
+  actionType:string;
+  reloadActiveTab?: () => void;
 }) => {
 
   const style = {
@@ -29,19 +33,18 @@ const ConfirmationModal = ({
   };
   const [cardId, setCardId] = React.useState('question'); // State to trigger update
   const [triggerUpdate, setTriggerUpdate] = React.useState(false); // State to trigger update
-  const [updateSingerError, setUpdateSingerError] = useState(null);
-  const [updateSingerData, setUpdateSingerData] = useState(null);
-  const prevUpdateSingerError = useRef();
-  const prevUpdateSingerData = useRef();
+  const [updateError, setupdateError] = useState(null);
+  const [updateData, setUpdateData] = useState(null);
+  const prevupdateError = useRef();
+  const prevupdateData = useRef();
 
   useEffect(() => {
-    prevUpdateSingerError.current = updateSingerError;
-    prevUpdateSingerData.current = updateSingerData;
-  }, [updateSingerError, updateSingerData]);
+    prevupdateError.current = updateError;
+    prevupdateData.current = updateData;
+  }, [updateError, updateData]);
 
-  const handleApprove = () => {
-    reloadActiveTab()
-    setTriggerUpdate(true); // Set trigger to true when approve button is clicked
+  const handleApproveReject = () => {
+    setTriggerUpdate(true);
   };
 
 
@@ -49,21 +52,21 @@ const handleClose = () => {
     onClose();
     // Reset error and data values when modal is closed
     setTriggerUpdate(false)
-    setUpdateSingerError(null);
-    setUpdateSingerData(null);
+    setupdateError(null);
+    setUpdateData(null);
     setCardId('question')
 
   };
  
-  const { loading, error, data } = useValidateTableData(triggerUpdate, selectedDynamicValues,tabType);
+  const { loading, error, data } = useValidateTableData(triggerUpdate, selectedDynamicValues,tabType,actionType,UserInput);
 
   useEffect(() => {
     if (!loading && !error && data) {
-      setUpdateSingerData(data);
+      setUpdateData(data);
       reloadActiveTab();
       setCardId('answer')
     } else if (error) {
-      setUpdateSingerError(error);
+      setupdateError(error);
     }
   }, [loading, error, data]);
 
@@ -73,10 +76,10 @@ const handleClose = () => {
       <Box sx={style}>
         {cardId === 'question' && (
           <Card id="question" style={{ padding: '30px', textAlign: 'left', width: '100%' }}>
-           {(!updateSingerError?.message && (
+           {(!updateError?.message && (
             <div>
             <Typography id="modal-modal-title" variant="h6" component="h2">
-              Approve {numSelected} selected records
+            {(actionType=='approve'? 'Approve':'Reject' )}   {numSelected} selected records
             </Typography>
             <Typography id="modal-modal-description" sx={{ mt: 3 }}>
               {selectedDynamicValues?.map((value, index) => (
@@ -93,14 +96,14 @@ const handleClose = () => {
                 Cancel
               </Button>{' '}
               &nbsp;
-              <Button onClick={handleApprove} variant="contained">
-                Approve
+              <Button onClick={handleApproveReject} variant="contained">
+               {(actionType == 'approve'? 'Approve':'Proceed' )}  
               </Button>
               </div> </div>
            ) )}
-            {updateSingerError?.message &&(
+            {updateError?.message &&(
                 <div style={{textAlign:'center'}}>
-                    <p>{updateSingerError?.message}</p>
+                    <p style={{textTransform:"capitalize"}}>{updateError?.message}</p>
                     <Button  variant='outlined' onClick={handleClose}>Close</Button>
                 </div>
             )}
@@ -108,8 +111,8 @@ const handleClose = () => {
         )}
         {cardId === 'answer' && (
           <Card id="answer" style={{ padding: '30px', textAlign: 'center' }}>
-            <Typography id="modal-modal-title" variant="h6" component="h2">
-            {updateSingerData && updateSingerData.message}
+            <Typography id="modal-modal-title" variant="h6" component="h2" sx={{textTransform:"capitalize"}}>
+            {updateData && updateData.message}
             </Typography>
             <div style={{ textAlign: 'center', padding: '40px 0px 0px' }}>
               <Button onClick={handleClose} variant="outlined">

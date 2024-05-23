@@ -1,32 +1,30 @@
-// useUpdateSingerData.ts
 import { useState, useEffect } from 'react';
-import { updateRegionData } from '../Api';
+import { getMetrics } from '../Api';
 
 
-const useUpdateRegionData = (trigger: boolean, selectedItems:string[]) => {
+const useMetrics = (trigger: number, dataa:string[]) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [data, setData] = useState<any>([]);
 
   useEffect(() => {
-    if (!trigger) return; // Exit if trigger is false
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        const responseData = await updateRegionData(selectedItems);
+        const responseData = await getMetrics();
         setData(responseData);
-
         setLoading(false);
+
+
       } catch (error) {
         setError(error);
         setLoading(false);
       }
     };
     fetchData();
-  }, [trigger]); // Run effect when trigger changes
-
+  }, [trigger,dataa]); 
   return { data, loading, error };
 };
 
-export default useUpdateRegionData;
+export default useMetrics;
